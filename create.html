@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>จัดการข้อมูลนักเรียน</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            background: #f0f4f8;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 450px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="loginContainer">
+        <h2>กรุณากรอกรหัสผ่าน</h2>
+        <input type="password" id="passwordInput" class="form-control" placeholder="กรอกรหัสผ่าน">
+        <button class="btn btn-primary mt-3 w-100" onclick="checkPassword()">เข้าสู่ระบบ</button>
+        <p id="loginStatus" class="mt-3 text-danger"></p>
+    </div>
+
+    <div class="container hidden" id="mainContainer">
+        <h2>จัดการข้อมูลนักเรียน</h2>
+        
+        <!-- ฟอร์มเพิ่มนักเรียน -->
+        <label>ห้องเรียน:</label>
+        <input type="text" id="classInput" class="form-control" placeholder="เช่น ม.1/1">
+        
+        <label class="mt-2">ชื่อนักเรียน:</label>
+        <input type="text" id="nameInput" class="form-control" placeholder="เช่น สมชาย ใจดี">
+        
+        <button class="btn btn-primary mt-3 w-100" onclick="addStudent()">เพิ่มนักเรียน</button>
+        <p id="addStatus" class="mt-3 text-success"></p>
+        
+        <!-- ฟอร์มเลือกห้องและรายชื่อนักเรียนสำหรับลบ -->
+        <label class="mt-4">เลือกห้องเรียนเพื่อดึงชื่อนักเรียน:</label>
+        <input type="text" id="deleteClassInput" class="form-control" placeholder="เช่น ม.1/1" onkeyup="loadStudents()">
+        
+        <label class="mt-2">เลือกชื่อนักเรียนที่ต้องการลบ:</label>
+        <select id="deleteStudentSelect" class="form-control">
+            <option value="">-- เลือกชื่อนักเรียน --</option>
+        </select>
+        
+        <button class="btn btn-danger mt-3 w-100" onclick="deleteStudent()">ลบนักเรียน</button>
+        <p id="deleteStatus" class="mt-3 text-danger"></p>
+    </div>
+
+    <script>
+        const apiUrl = "https://script.google.com/macros/s/AKfycbxBoCRBUIvUX9gk1hs19hrmCmz8UL-Q_2jSRZorw5I1_TXlHZGZI7ZYATgK8eVlYG07/exec";
+        const correctPassword = "1234";  // เปลี่ยนรหัสผ่านที่ต้องการที่นี่
+
+        function checkPassword() {
+            const enteredPassword = document.getElementById("passwordInput").value;
+
+            if (enteredPassword === correctPassword) {
+                document.getElementById("loginContainer").classList.add("hidden");
+                document.getElementById("mainContainer").classList.remove("hidden");
+            } else {
+                document.getElementById("loginStatus").innerText = "❌ รหัสผ่านไม่ถูกต้อง";
+            }
+        }
+
+        async function addStudent() {
+            let className = document.getElementById("classInput").value;
+            let studentName = document.getElementById("nameInput").value;
+            
+            if (!className || !studentName) {
+                alert("กรุณากรอกข้อมูลให้ครบ");
+                return;
+            }
+            
+            let response = await fetch(apiUrl + `?action=addStudent&class=${className}&name=${studentName}`);
+            let result = await response.text();
+            
+            if (result === "Success") {
+                document.getElementById("addStatus").innerText = "✅ เพิ่มนักเรียนเรียบร้อย!";
+                document.getElementById("classInput").value = "";
+                document.getElementById("nameInput").value = "";
+            } else {
+                alert("เกิดข้อผิดพลาด ลองใหม่อีกครั้ง");
+            }
+        }
+
+        // ฟังก์ชันโหลดรายชื่อนักเรียนจาก Google Sheets
+        async function loadStudents() {
+            let className = document.getElementById("deleteClassInput").value;
+
+            if (!className) {
+                document.getElementById("deleteStudentSelect").innerHTML = "<option value=''>-- เลือกชื่อนักเรียน --</option>";
+                return;
+            }
+
+            let response = await fetch(apiUrl + `?action=loadStudents&class=${className}`);
+            let students = await response.json();
+
+            // แสดงรายชื่อนักเรียนใน dropdown
+            let select = document.getElementById("deleteStudentSelect");
+            select.innerHTML = "<option value=''>-- เลือกชื่อนักเรียน --</option>";
+            students.forEach(student => {
+                let option = document.createElement("option");
+                option.value = student;
+                option.textContent = student;
+                select.appendChild(option);
+            });
+        }
+
+        async function deleteStudent() {
+            let studentName = document.getElementById("deleteStudentSelect").value;
+
+            if (!studentName) {
+                alert("กรุณาเลือกชื่อนักเรียนที่ต้องการลบ");
+                return;
+            }
+
+            let response = await fetch(apiUrl + `?action=deleteStudent&name=${studentName}`);
+            let result = await response.text();
+            
+            if (result === "Student deleted successfully") {
+                document.getElementById("deleteStatus").innerText = "✅ ลบนักเรียนเรียบร้อย!";
+                document.getElementById("deleteStudentSelect").value = "";
+            } else {
+                document.getElementById("deleteStatus").innerText = "❌ ไม่พบชื่อนักเรียนที่ต้องการลบ";
+            }
+        }
+    </script>
+</body>
+</html>
