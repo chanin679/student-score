@@ -3,9 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบให้คะแนนนักเรียน</title>
+    <title>บันทึกความประพฤติ</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap');
+         @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap');
 
         body {
             font-family: 'Prompt', sans-serif;
@@ -17,161 +22,278 @@
         }
 
         .container {
-            max-width: 400px;
-            background: #fff;
+            max-width: 450px;
+            background: white;
             padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-            margin: auto;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
         }
 
-        .logo {
-            width: 80px;
-            height: auto;
+        .btn-primary {
+            background-color: #2d89ef;
+            padding: 10px 20px;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .history-card {
+            max-height: 150px;
+            overflow-y: auto;
+            text-align: left;
+        }
+
+        label {
+            text-align: left;
+            display: block;
             margin-bottom: 5px;
         }
 
         h2 {
+            font-size: 28px;
             color: #2d89ef;
             font-weight: 600;
             margin-top: 0;
             margin-bottom: 5px;
         }
 
-        .subtitle {
-            font-size: 16px;
-            color: black;
-            font-weight: 500;
+        h5 {
+            font-size: 18px;
+            font-weight: 550;
+        }
+        h3 {
+            font-size: 20px;
+        }
+        .d-flex {
+            justify-content: flex-start;
         }
 
-        label {
-            display: block;
-            font-size: 16px;
-            margin: 10px 0 5px;
-            font-weight: 500;
-        }
-
-        select, button {
-            width: 100%;
-            padding: 10px;
-            font-size: 16px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            background: #fff;
-        }
-
-        button {
-            background: #2d89ef;
-            color: white;
-            font-weight: bold;
+        /* ปรับขนาด radio button และข้อความให้เรียบง่าย */
+        .behavior-radio {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 50%;
+            border: 2px solid #ccc;
             cursor: pointer;
-            border: none;
-            transition: 0.3s;
+            transition: background-color 0.3s ease;
         }
 
-        button:hover {
-            background: #1c6cd5;
+        /* เมื่อเลือก radio button */
+        .behavior-radio:checked {
+            background-color: #2d89ef;
+            border-color: #2d89ef;
         }
 
-        #historyDisplay {
-            background: #eef2f7;
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
+        /* ข้อความข้างๆ radio button */
+        .behavior-radio-label {
+            font-size: 16px;
+            font-weight: 600;
+            line-height: 20px;
+            display: inline-block;
+        }
+
+        /* ปรับการจัดการให้ radio button กับข้อความอยู่กลางแนวตั้ง */
+        .behavior-radio-group {
+            display: flex;
+            align-items: center;
             margin-top: 10px;
         }
     </style>
-    <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbwr5W7yUlq4P5RuaWOF48JxODT1WA30BCNOfAZJKCfnkAxL4EyAbK84OuRXopOqqyYwSg/exec";
-        let studentDataCache = null;
-
-        async function fetchStudentData() {
-            if (studentDataCache) return studentDataCache;
-            let response = await fetch(API_URL + "?action=getStudents");
-            studentDataCache = await response.json();
-            return studentDataCache;
-        }
-
-        async function loadStudents() {
-            let students = await fetchStudentData();
-            let roomSelect = document.getElementById("roomSelect");
-            roomSelect.innerHTML = `<option value="">-- เลือกห้องเรียน --</option>`;
-            Object.keys(students).forEach(room => {
-                roomSelect.innerHTML += `<option value="${room}">${room}</option>`;
-            });
-
-            roomSelect.addEventListener("change", function() {
-                let studentSelect = document.getElementById("studentSelect");
-                studentSelect.innerHTML = `<option value="">-- เลือกชื่อนักเรียน --</option>`;
-                let selectedRoom = this.value;
-                if (students[selectedRoom]) {
-                    students[selectedRoom].forEach(student => {
-                        studentSelect.innerHTML += `<option value="${student.name}" data-history="${student.history || 'ไม่มีข้อมูล'}">${student.name} (คะแนน: ${student.score})</option>`;
-                    });
-                }
-            });
-
-            document.getElementById("studentSelect").addEventListener("change", function() {
-                let selectedOption = this.selectedOptions[0];
-                let historyText = selectedOption.getAttribute("data-history") || "ไม่มีข้อมูล";
-                document.getElementById("historyDisplay").innerText = `ประวัติพฤติกรรม: ${historyText}`;
-            });
-        }
-
-        async function updateScore() {
-            let room = document.getElementById("roomSelect").value;
-            let name = document.getElementById("studentSelect").value;
-            let scoreChange = Number(document.getElementById("behaviorSelect").value);
-            let behaviorText = document.getElementById("behaviorSelect").selectedOptions[0].text;
-
-            if (!room || !name || !scoreChange) {
-                alert("กรุณาเลือกข้อมูลให้ครบถ้วน");
-                return;
-            }
-
-            let response = await fetch(API_URL + `?action=updateScore&room=${room}&name=${name}&scoreChange=${scoreChange}&behavior=${encodeURIComponent(behaviorText)}`);
-            let result = await response.text();
-
-            if (result === "Success") {
-                alert("อัปเดตคะแนนและบันทึกพฤติกรรมเรียบร้อย!");
-                studentDataCache = null;
-                location.reload(); // รีเฟรชหน้าเว็บ
-            } else {
-                alert("เกิดข้อผิดพลาด: " + result);
-            }
-        }
-
-        window.onload = loadStudents;
-    </script>
 </head>
 <body>
-    <div class="container">
-        <img src="https://img2.pic.in.th/pic/92100569_0_20190530-104518.png" alt="โลโก้โรงเรียน" class="logo">
-        <h2>โรงเรียนหาดสำราญวิทยาคม</h2>
-        <div class="subtitle">📚 ระบบบันทึกพฤติกรรมนักเรียน</div>
-        <div class="subtitle">BY ครูชนินทร์ เบ้าทอง&nbsp&nbspbeta1.0</div>
-        
-        <label for="roomSelect">🏫 ห้องเรียน:</label>
-        <select id="roomSelect"></select>
+    <div class="d-flex justify-content-center align-items-center vh-100">
+        <div class="container">
+            <img src="logo.png" alt="โรงเรียน" width="80">
+            <h2 class="mt-2">โรงเรียนหาดสำราญวิทยาคม</h2>
+            <p class="text-muted">📋 ระบบบันทึกความประพฤติ BY ครูชนินทร์</p>
 
-        <label for="studentSelect">👩‍🎓 ชื่อนักเรียน:</label>
-        <select id="studentSelect"></select>
+            <!-- หน้าเข้าสู่ระบบ -->
+            <div id="loginSection">
+                <h3>เข้าสู่ระบบ</h3>
+                <label for="username">ชื่อผู้ใช้:</label>
+                <input type="text" id="username" class="form-control mb-2"><br>
+                <label for="password">รหัสผ่าน:</label>
+                <input type="password" id="password" class="form-control mb-3"><br>
+                <button class="btn btn-primary" onclick="loginUser()">เข้าสู่ระบบ</button>
+            </div>
 
-        <label for="behaviorSelect">📌 พฤติกรรม:</label>
-        <select id="behaviorSelect">
-            <option value="0">--&nbspเลือกพฤติกรรม&nbsp--</option>
-            <option value="10">ช่วยงานครู (+10)</option>
-            <option value="-10">มาเรียนสาย (-10)</option>
-            <option value="5">ทำความสะอาดห้อง (+5)</option>
-            <option value="-5">ไม่ส่งการบ้าน (-5)</option>
-            <option value="+5">เก็บขยะ (+5)</option>
-        </select>
+            <!-- หน้ากรอกข้อมูลนักเรียน -->
+            <div id="studentFormSection" style="display: none;">
+                <label class="mt-2"><i class="fas fa-school"></i>📚 ห้องเรียน:</label>
+                <select id="classSelect" class="form-select"></select>
 
-        <button onclick="updateScore()">✅ บันทึกคะแนน</button>
+                <label class="mt-2"><i class="fas fa-user"></i>👩‍🎓 ชื่อนักเรียน:</label>
+                <select id="studentSelect" class="form-select"></select>
 
-        <div id="historyDisplay">ประวัติพฤติกรรม: -</div>
+                <label class="mt-2"><i class="fas fa-list"></i> เลือกประเภทความประพฤติ:</label>
+                <div class="behavior-radio-group">
+                    <input type="radio" name="behaviorType" value="bad" class="behavior-radio" checked>
+                    <span class="behavior-radio-label text-danger">📌 ความประพฤติผิดระเบียบ</span>
+                </div>
+                <div class="behavior-radio-group">
+                    <input type="radio" name="behaviorType" value="good" class="behavior-radio">
+                    <span class="behavior-radio-label text-success">🌟 ความประพฤติดี</span>
+                </div>
+
+                <label class="mt-2"><i class="fas fa-check-circle"></i> เลือกพฤติกรรม:</label>
+                <select id="behaviorSelect" class="form-select">
+                    <option value="" disabled selected>กรุณาเลือกพฤติกรรม</option>
+                </select>
+
+                <button class="btn btn-primary mt-3 w-100" onclick="submitBehavior()">
+                    <i class="fas fa-save"></i> ✅ บันทึกคะแนน
+                </button>
+
+                <h5 class="mt-3">ประวัติพฤติกรรม</h5>
+                <div class="history-card card p-2">
+                    <h6 class="text-danger">ความประพฤติผิดระเบียบ</h6>
+                    <ul id="badBehaviorHistory" class="list-group list-group-flush"></ul>
+                </div>
+                <div class="history-card card p-2 mt-2">
+                    <h6 class="text-success">ความประพฤติดี</h6>
+                    <ul id="goodBehaviorHistory" class="list-group list-group-flush"></ul>
+                    <button class="btn btn-secondary mt-3 w-100" onclick="location.href='create.html'">
+                        ➕ เพิ่มข้อมูลนักเรียน *สำหรับฝ่ายวิชาการ*
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <script>
+        const apiUrl = "https://script.google.com/macros/s/AKfycbxezV-ZDB-U7sY3WG_Y72rehMv8pV7CiyHtWi6V0NGH4unpsnRS-rdWWpRA4mbKS7my/exec";
+
+        async function loginUser() {
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+
+            // Check username and password (simulated here)
+            if (username === "admin" && password === "password123") {
+                localStorage.setItem("isLoggedIn", "true");
+                document.getElementById("loginSection").style.display = "none";
+                document.getElementById("studentFormSection").style.display = "block";
+                fetchStudents();
+            } else {
+                alert("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+            }
+        }
+
+        // ตรวจสอบสถานะการล็อกอินเมื่อโหลดหน้า
+        if (localStorage.getItem('isLoggedIn') !== 'true') {
+            document.getElementById("loginSection").style.display = "block";
+            document.getElementById("studentFormSection").style.display = "none";
+        } else {
+            document.getElementById("loginSection").style.display = "none";
+            document.getElementById("studentFormSection").style.display = "block";
+            fetchStudents();
+        }
+
+        // ฟังก์ชันเพิ่มเติม (fetchStudents, submitBehavior, etc.) ยังเหมือนเดิม
+        // เช่น updateStudentList, fetchBehaviorHistory ฯลฯ
+        const badBehaviors = [
+            { name: "มาสาย", score: -5 },
+            { name: "หนีเรียน", score: -20 },
+            { name: "ส่งงานช้า", score: -2 },
+            { name: "ทะเลาะวิวาท", score: -10 }
+        ];
+
+        const goodBehaviors = [
+            { name: "ช่วยครูทำงาน", score: 10 },
+            { name: "ตั้งใจเรียน", score: 5 },
+            { name: "ช่วยเพื่อนทำงาน", score: 8 }
+        ];
+
+        async function fetchStudents() {
+    let response = await fetch(apiUrl + "?action=getStudents");
+    let students = await response.json();
+
+    let classSelect = document.getElementById("classSelect");
+    let studentSelect = document.getElementById("studentSelect");
+
+    let classes = [...new Set(students.map(s => s.class))];
+    // เพิ่มตัวเลือกห้องเรียน
+    classSelect.innerHTML = `<option value="" disabled selected>กรุณาเลือกห้องเรียน</option>` + classes.map(c => `<option value="${c}">${c}</option>`).join("");
+    updateStudentList(students);
+
+    // เพิ่มการตรวจสอบว่าเลือกห้องเรียนแล้วหรือยัง
+    classSelect.onchange = () => {
+        if (classSelect.value) {
+            updateStudentList(students);
+        }
+    };
+}
+
+
+        function updateStudentList(students) {
+            let selectedClass = document.getElementById("classSelect").value;
+            let studentSelect = document.getElementById("studentSelect");
+
+            let filteredStudents = students.filter(s => s.class === selectedClass);
+            studentSelect.innerHTML = filteredStudents.map(s => `<option value="${s.name}">${s.name} (คะแนน: ${s.score})</option>`).join("");
+
+            studentSelect.onchange = () => fetchBehaviorHistory(studentSelect.value);
+            fetchBehaviorHistory(studentSelect.value);
+        }
+
+        function updateBehaviorOptions() {
+            let type = document.querySelector('input[name="behaviorType"]:checked').value;
+            let behaviorSelect = document.getElementById("behaviorSelect");
+            let behaviors = type === "bad" ? badBehaviors : goodBehaviors;
+
+            behaviorSelect.innerHTML = `<option value="" disabled selected>กรุณาเลือกพฤติกรรม</option>` + behaviors.map(b => 
+                `<option value="${b.name}" data-score="${b.score}">${b.name} (${b.score > 0 ? "+" : ""}${b.score} คะแนน)</option>`
+            ).join("");
+            $('#behaviorSelect').select2(); // ใช้ select2 ให้สามารถค้นหาพฤติกรรมได้
+        }
+
+        async function fetchBehaviorHistory(studentName) {
+            let response = await fetch(apiUrl + `?action=getBehaviorHistory&id=${studentName}`);
+            let history = await response.json();
+
+            let badBehaviorList = document.getElementById("badBehaviorHistory");
+            let goodBehaviorList = document.getElementById("goodBehaviorHistory");
+
+            badBehaviorList.innerHTML = history.badBehavior.length > 0 ? history.badBehavior.map(b => 
+                `<li class="list-group-item">${b}</li>`).join("") : "<li class='list-group-item'>ไม่มีข้อมูล</li>";
+
+            goodBehaviorList.innerHTML = history.goodBehavior.length > 0 ? history.goodBehavior.map(g => 
+                `<li class="list-group-item">${g}</li>`).join("") : "<li class='list-group-item'>ไม่มีข้อมูล</li>";
+        }
+
+        async function submitBehavior() {
+            let studentSelect = document.getElementById("studentSelect");
+            let selectedStudent = studentSelect.value;
+
+            let type = document.querySelector('input[name="behaviorType"]:checked').value;
+            let behaviorSelect = document.getElementById("behaviorSelect");
+            let behavior = behaviorSelect.value;
+            let score = behaviorSelect.options[behaviorSelect.selectedIndex].dataset.score;
+
+            if (!selectedStudent || !behavior) return alert("กรุณาเลือกนักเรียนและพฤติกรรม");
+
+            let response = await fetch(apiUrl + `?action=updateBehavior&id=${selectedStudent}&type=${type}&behavior=${behavior}&score=${score}`);
+            let result = await response.text();
+            if (result === "Success") {
+                alert("บันทึกสำเร็จ!");
+                await fetchStudents(); // อัปเดตรายชื่อนักเรียนและคะแนน
+            } else {
+                alert("เกิดข้อผิดพลาด");
+            }
+        }
+
+        document.querySelectorAll('input[name="behaviorType"]').forEach(el => {
+            el.addEventListener("change", updateBehaviorOptions);
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+            fetchStudents();
+            updateBehaviorOptions();
+        });
+    </script>
 </body>
 </html>
